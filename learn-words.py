@@ -66,7 +66,7 @@ for w in word_list:
 
 if len(marked) > 0:
     print("Saving ", len(marked), "words to file", fn_marked)
-    with open(fn_marked, mode='w') as f_marked:
+    with open(fn_marked, mode='w', newline='') as f_marked:
         writer = csv.writer(f_marked, 
                 delimiter=',', 
                 quotechar='"', 
