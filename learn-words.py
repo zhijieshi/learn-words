@@ -6,15 +6,27 @@ import itertools, random
 import datetime
 import json
 import requests
-# from PyDictionary import PyDictionary
+import webbrowser
 
-def getDefinition(word):
+# get definition and display in console
+def showDefinition1(word):
     r = requests.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}")
     # print(r)
     if r.status_code != 200:
+        print(f"Error: Cannot find the definition. code={r.status_code}")
         return None
     else:
-        return r.json()
+        js = r.json()
+        print(json.dumps(js[0]["meanings"], indent=4))
+        return js
+
+# show definition in a web browser
+def showDefinition(word, src='google'):
+    if src == 'oxford':
+        url = f"https://www.oxfordlearnersdictionaries.com/us/definition/english/{word}"
+    else:
+        url = f"https://www.google.com/search?q=define+{word}"
+    webbrowser.open(url)
 
 parser = argparse.ArgumentParser(description='Flashcards')
 # parser.add_argument('--num', type=int, default=0, help='a number.')
@@ -43,13 +55,13 @@ else:
         for line in f:
             word_list.append(['', line.rstrip(), ''])
 
-print(word_list)
+# print(word_list)
 
 n_total =  len(word_list)
 print(f"There are {n_total} words.")
 
 start_time = datetime.datetime.now() 
-fn_marked = start_time.strftime("%m%d-%H%M%S.csv")
+fn_marked = start_time.strftime("%m%d-%H%M%S.txt")
 print("The current time is", start_time.strftime("%H:%M:%S")) 
 
 random.shuffle(word_list)
@@ -59,45 +71,57 @@ n_correct = 0
 
 marked = []
 
-last = None
 done = 0
 counter = 0
 for w in word_list:
     counter += 1
-    print(f"{counter}/{n_total}----------------\n{w[1]}")
     repeat = 1
     while repeat:
-        repeat = 0
+        print(f"{counter}/{n_total}----------------\n{w[1]}")
         res = input()
         if len(res) > 0:
-            if res.upper()[0] == 'M':
+            res = res.upper()
+            if res[0] == 'M':
                 marked.append(w)
-            elif res.upper()[0] == 'P':
-                marked.append(last)
-                print(f"{last[0]} has been marked.")
-                repeat = 1
-            elif res.upper()[0] == 'Q':
+                showDefinition(w[1])
+                repeat = 0
+            elif res[0] == 'Q':
                 done = 1
+                repeat = 0
+            elif res[0] == 'P':
+                # marked the previous one
+                if counter > 1:
+                    marked.append(word_list[counter-2])
+                    print(f"{word_list[counter-2][1]} has been marked.")
+                else:
+                    print(f"There is no prevous word.")
+            elif res[0] == 'D':
+                showDefinition(w[1])
+            elif res[0] == 'O':
+                showDefinition(w[1], 'oxford')
+        else:
+            repeat = 0
+        # no else branch
+        # if it is empty line, move to the next word
     if done:
         break
     if len(w[2]) > 0:
         print(w[2])
-    else:
-        # print("PyDictionary:")
-        d = getDefinition(w[1])
-        if d:
-            print(json.dumps(d[0]["meanings"], indent=4))
-        else:
-            print("Error: Cannot find the definition.")
-    last = w
 
 if len(marked) > 0:
     print("Saving ", len(marked), "words to file", fn_marked)
-    with open(fn_marked, mode='w', newline='') as f_marked:
+    with open(fn_marked, mode='w') as f_marked:
+        for w in marked:
+            print(w[1], file=f_marked)
+
+'''
+if len(marked) > 0:
+    print("Saving ", len(marked), "words to file", fn_marked)
+    with open(fn_marked, mode='w' newline='') as f_marked:
         writer = csv.writer(f_marked, 
                 delimiter=',', 
                 quotechar='"', 
                 quoting=csv.QUOTE_MINIMAL)
         for w in marked:
             writer.writerow(w)
-
+'''
